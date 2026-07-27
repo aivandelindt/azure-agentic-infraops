@@ -6,8 +6,8 @@ All notable changes to **APEX** are documented in this file.
 
 For the full release history, see:
 
-- [Published Changelog](https://jonathan-vella.github.io/azure-agentic-infraops/project/changelog/)
-- [GitHub Releases](https://github.com/jonathan-vella/azure-agentic-infraops/releases)
+- [Published Changelog](https://apexops.pro/project/changelog/)
+- [GitHub Releases](https://github.com/jonathan-vella/apex/releases)
 - [VERSION.md](VERSION.md)
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
@@ -15,8 +15,192 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.10.0] — Unreleased
 
-See the [published changelog](https://jonathan-vella.github.io/azure-agentic-infraops/project/changelog/)
+See the [published changelog](https://apexops.pro/project/changelog/)
 for full details on this and all prior releases.
+
+### Changed (Model migration — Claude Sonnet 4.6 → Claude Sonnet 5)
+
+- chore(agents): migrated all 11 agents/subagents in the Sonnet cohort
+  from `Claude Sonnet 4.6` to `Claude Sonnet 5` (API model id
+  `claude-sonnet-5`) — `02-Requirements`, `04-Design`,
+  `06b-Bicep CodeGen`, `06t-Terraform CodeGen`, `08-As-Built`,
+  `11-Context Optimizer`, and the five IaC validate/whatif/plan/precheck
+  subagents (`bicep-validate-subagent`, `bicep-whatif-subagent`,
+  `terraform-validate-subagent`, `terraform-plan-subagent`,
+  `policy-precheck-subagent`). `Claude Sonnet 4.6` is now
+  `deprecated: true` in `model-catalog.json`, retained for audit
+  history only. CodeGen agents stay pinned to `effort: high` (no
+  `xhigh` escalation — AVM generation is structured execution, not
+  deep reasoning).
+- docs(vendor-prompting): `claude-best-practices.md` gains rule
+  R-CL-10 covering Sonnet 5 migration deltas (adaptive thinking on by
+  default, manual extended thinking removed, new tokenizer ~30% more
+  tokens, more literal instruction following, review-harness coverage
+  guidance), citing the new
+  [prompting-claude-sonnet-5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5)
+  source. `rules.json`, `family-support.md`, and `SKILL.md` source
+  citations updated; `fetch-vendor-prompting-guides.mjs` now tracks the
+  new source for drift detection.
+- docs: updated all cross-references in
+  `agent-authoring.instructions.md`, `agent-operating-frame.instructions.md`,
+  `context-optimization.instructions.md`, `context-management` skill
+  token budgets, `workflow-engine` handoff guide, `docs-writer`
+  repo-architecture reference, the docs site (`agents.md`,
+  `architecture-explorer-graph.json`), and `tools/registry/agent-registry.json`.
+
+### Removed (tools/scripts dead-code cleanup)
+
+- chore(scripts): delete orphaned/one-time scripts with no npm, hook, or
+  CI wiring — `report-agent-body-sizes.mjs` (superseded by
+  `assess-agents.mjs`), `migrate-legacy-findings.mjs` (one-time v1.0
+  findings migration), `bench-hooks.sh`, `crawl-dev-site.mjs`,
+  `strip-handoff-kind.py`, and the eight `markdown-prettifiers/*.py`
+  one-time doc-styling tools. Companion cleanup drops the
+  `markdown-prettifiers/**` ignore glob from `.markdownlint-cli2.jsonc`
+  and the stale migration reference in `validate-challenger-findings.mjs`.
+
+### Added (Workflow hardening — issue #425)
+
+- feat(skills): `azure-artifacts` SKILL.md gains a `## Post-write
+  validation` table (JSON → `python -m json.tool`, Bicep →
+  `bicep build --stdout`, Terraform → `terraform fmt -check` +
+  `terraform validate`; Markdown delegated to the lefthook
+  `artifact-validation` hook). The shared agent operating-frame
+  instructions reference it so every Step 1–7 agent inherits the rule.
+  Guarded by `tests/scripts/test_post_write_validation.mjs`.
+- feat(scripts): `safe-shell.mjs` linter gains two new rules.
+  `command-portability` flags bare `rg` / `fd` / `bat` invocations in
+  committed shell snippets unless a `command -v <tool>` guard appears
+  in the same fence. `agent-output-no-heredoc` flags heredoc, `tee`,
+  `>`, and `>>` writes targeting `agent-output/**`. Fixture-driven
+  tests in `tests/scripts/test_safe_shell.mjs` cover guarded,
+  unguarded, append-redirect, tee, and indented-heredoc cases.
+- feat(instructions): `no-interactive-shell.instructions.md` gains
+  Rule 4 (Command portability). `no-heredoc.instructions.md` gains
+  the no-shell-writes-to-`agent-output/**` sub-rule.
+  `agent-authoring.instructions.md` gains rules for the new
+  no-shell-writes-to-agent-output and execution-subagent invocation
+  prompt contracts.
+- feat(agents): canonical execution-subagent invocation prompt
+  template at
+  `tools/apex-prompts/utility-prompts/execution-subagent.prompt.md`
+  with three required H2s (`## Objective`, `## Commands`,
+  `## Expected return`). Parent agents must follow this shape when
+  calling `runSubagent` for validate / what-if / plan /
+  policy-precheck / cost-estimate / challenger-review subagents.
+- feat(schemas): `deployment-preview-v1` JSON schema at
+  `tools/schemas/deployment-preview.schema.json` defines the
+  five-line deploy approval block composed by 07b/07t from
+  what-if / plan / policy-precheck / cost-estimate JSON.
+- feat(apex-recall): new `transition` subcommand bundles
+  `complete-step` (with challenger-findings gate) + N×`decide` +
+  next-step `start-step` into a single atomic
+  `00-session-state.json` write. Preferred path for step changes;
+  legacy commands remain. Exit 2 when the challenger sidecar is
+  missing (same semantics as `complete-step`). Six tests in
+  `tools/apex-recall/tests/test_transition.py`.
+- feat(agents): `07b-bicep-deploy` and `07t-terraform-deploy` add a
+  `## Deploy Approval Block` step that renders a five-line gate
+  (creates/modifies/deletes, destructive, deploy_gate, cost_delta vs
+  envelope, decision) before `azd up` / `terraform apply`. Composed
+  preview is persisted to
+  `agent-output/{project}/06-deploy-approval.json` conforming to
+  `deployment-preview-v1`.
+- feat(skills): `iac-common` gains `## Bounded retry` (3-attempt cap;
+  escalates with `proceed-with-substitute` / `change-region` /
+  `abort`). Referenced from 07b, 07t, 04g-governance. New
+  challenger-checklist entries flag missing approval blocks and
+  unbounded retry loops.
+
+### Changed (Workflow hardening — issue #425)
+
+- `.github/copilot-instructions.md` advertises
+  `apex-recall transition` as the preferred call for step changes.
+
+### Changed (tools/scripts validator wiring)
+
+- chore(scripts): wire `validate-context-budget.mjs` into `validate:_node`
+  and `validate:_node-ci` (new `validate:context-budget` alias) so the
+  documented Per-Step File Re-Read Budget (HARD LIMIT) is enforced in CI
+  instead of sitting unwired. The validator itself runs as part of
+  `validate:_node` / `validate:_node-ci`. A standalone smoke test
+  (`tools/tests/validate-context-budget.test.mjs`, runnable via
+  `test:context-budget`) guards the alias wiring and validator health in
+  local development.
+
+### Rollback (Workflow hardening — issue #425)
+
+The change is additive. Rollback paths:
+
+- `apex-recall transition` — legacy `checkpoint` / `decide` /
+  `complete-step` commands remain functional; orchestrators can
+  revert to them.
+- Deploy approval block — the H2 in 07b/07t can be reverted by a
+  one-line agent edit; existing what-if + policy-precheck flow is
+  preserved.
+- safe-shell rules — additive; no behavior change for compliant
+  snippets. Disable individual rules by removing them from `RULES`
+  in `tools/scripts/safe-shell.mjs`.
+
+### Changed (tools/scripts DRY — _lib/json)
+
+- refactor(scripts): extract `readJson` / `readJsonSafe` / `writeJson` /
+  `sha256File` into `tools/scripts/_lib/json.mjs` and adopt it across 11
+  validators/generators (IaC contract + handoff + consistency, policy
+  property map, environment manifest, SKU manifest + IaC coverage, SKU
+  allowlist derivation, Draw.io baseline capture, Azure-icon freshness,
+  explorer-graph generation). Removes the inline `JSON.parse(readFileSync)`
+  duplication and the now-orphaned `fs` / `crypto` imports; behavior is
+  byte-for-byte identical. Guarded by `tools/tests/lib/json.test.mjs`
+  (`test:lib-json`).
+
+### Changed (tools/scripts DRY — _lib/ajv-validator)
+
+- refactor(scripts): extract the `new Ajv2020({ allErrors: true, strict:
+  false })` + `addFormats` construction and the read-schema-then-compile
+  `loadValidator` into `tools/scripts/_lib/ajv-validator.mjs`
+  (`createAjv`, `loadValidator`). Adopt it across 8 validators (IaC
+  contract + handoff, policy property map, environment manifest, SKU
+  manifest, challenge-findings decisions, JSON-schema validator, artifact
+  governance-schema check), removing the duplicated Ajv boilerplate and
+  now-orphaned `ajv` / `ajv-formats` imports; behavior is identical.
+  `validate-decision-keys.mjs` is intentionally left untouched (it omits
+  `addFormats` by design). Guarded by
+  `tools/tests/lib/ajv-validator.test.mjs` (`test:lib-ajv`).
+
+### Changed (tools/scripts DRY — _lib/e2e-helpers)
+
+- refactor(scripts): extract the duplicated `detectIacTool` and
+  `fileExists` helpers (byte-identical across `benchmark-e2e.mjs` and
+  `validate-e2e-step.mjs`) into `tools/scripts/_lib/e2e-helpers.mjs`, and
+  point the e2e family's inline JSON readers at the existing
+  `_lib/json.mjs` helpers (`readJsonSafe` for the null-on-error variant in
+  `benchmark-e2e` + `combine-e2e-runs`; strict `readJson` in
+  `measure-workflow-baseline`). `validate-e2e-step`'s JSON output contract
+  is unchanged. Guarded by `tools/tests/lib/e2e-helpers.test.mjs`
+  (`test:lib-e2e`).
+
+### Changed (tools/scripts consolidation — validate-models)
+
+- refactor(scripts): merge the three read-only model validators
+  (`validate-model-catalog`, `validate-model-consistency`,
+  `validate-deprecated-models`) into a single
+  `tools/scripts/validate-models.mjs` with `--only=catalog|consistency|deprecated`
+  (no flag runs all three). The `validate:model-catalog`,
+  `validate:model-consistency`, and `validate:deprecated-models` npm
+  aliases are preserved as thin pass-throughs, so hooks/CI are unchanged;
+  a new `validate:models` runs the full set. Per-mode output is
+  byte-for-byte identical to the former scripts (verified by diff against
+  a `main` worktree). The mutating generator (`generate-model-catalog.mjs`)
+  stays separate, and its `buildAssignments` helper moves into
+  `_lib/model-helpers.mjs` — removing the former validator→generator
+  import. All live in-repo references to the three former script paths
+  (code comments, the agent-registry schema description, model-catalog.json
+  metadata, vendor-prompting instructions + skill references, and the
+  regenerated architecture-explorer-graph.json) are repointed to
+  `validate-models.mjs`; historical CHANGELOG / QUALITY_SCORE entries are
+  left intact. Guarded by `tools/tests/validate-models.test.mjs`
+  (`test:models`).
 
 ### Added (docs)
 
@@ -28,7 +212,7 @@ for full details on this and all prior releases.
   a regenerable Python-diagrams source at
   `site/src/assets/diagrams/workflow-deep-dive/gen.py` plus the
   end-to-end orchestration and lessons-loop PNGs. Sidebar entry added
-  under *Concepts* as a sibling to *How It Works*.
+  under _Concepts_ as a sibling to _How It Works_.
 
 ### Added (Plan 01 — token-reduction workstream)
 

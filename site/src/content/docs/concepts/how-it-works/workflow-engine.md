@@ -23,11 +23,10 @@ flowchart TD
     G1{{"gate-1: Approval"}}:::gate
     S2["step-2: Architecture"]
     G2{{"gate-2: Approval"}}:::gate
-    S3["step-3: Design"]
+    S3["step-3: Design (opt)"]
     S35["step-3.5: Governance"]
     G25{{"gate-2.5: Approval"}}:::gate
-    S4B["step-4b: Bicep Plan"]
-    S4T["step-4t: TF Plan"]
+    S4["step-4: IaC Plan"]
     G3{{"gate-3: Approval"}}:::gate
     S5B["step-5b: Bicep Code"]
     S5T["step-5t: TF Code"]
@@ -41,8 +40,8 @@ flowchart TD
     G2 --> S3
     S3 --> S35
     S35 --> G25
-    G25 --> S4B & S4T
-    S4B & S4T --> G3
+    G25 --> S4
+    S4 --> G3
     G3 --> S5B & S5T
     S5B & S5T --> G4
     G4 --> S6B & S6T
@@ -51,8 +50,9 @@ flowchart TD
 ```
 
 Each node has a type (`agent-step`, `gate`, `subagent-fan-out`, `validation`), and each
-edge has a condition (`on_complete`, `on_skip`, `on_fail`). Conditional routing at IaC
-nodes is governed by the `decisions.iac_tool` field.
+edge has a condition (`on_complete`, `on_skip`, `on_fail`). Step 4 (IaC Plan) is
+unified across IaC tools; the workflow forks at Step 5 (Code) and Step 6
+(Deploy), with conditional routing governed by the `decisions.iac_tool` field.
 
 :::note[Read-only workflow graph]
 The workflow DAG is auto-loaded by the Orchestrator. Users do not edit
@@ -63,6 +63,21 @@ definitions or skills instead.
 ### Gates and Approval Points
 
 Five mandatory gates require explicit human confirmation before the workflow advances:
+
+```mermaid
+flowchart LR
+  classDef step fill:#1e3a5f,stroke:#0078d4,color:#dbeafe,rx:6,ry:6
+  classDef gate fill:#fef3c7,stroke:#d97706,color:#7c2d12,rx:6,ry:6
+  classDef auto fill:#dcfce7,stroke:#15803d,color:#14532d,rx:6,ry:6
+
+  S1[Step 1<br/>Requirements]:::step --> G1{{Gate 1<br/>Requirements OK?}}:::gate
+  G1 --> S2[Step 2<br/>Architecture]:::step --> G2{{Gate 2<br/>Arch + cost OK?}}:::gate
+  G2 --> S4[Step 4<br/>IaC Plan]:::step --> G3{{Gate 3<br/>Plan OK?}}:::gate
+  G3 --> S5[Step 5<br/>IaC Code]:::step --> G4(((Gate 4<br/>Automated)))
+  G4 --> S6[Step 6<br/>Deploy]:::step --> G5{{Gate 5<br/>Resources OK?}}:::gate
+  G5 --> S7[Step 7<br/>As-Built]:::step
+  class G4 auto
+```
 
 | Gate | After  | Blocks Until                                      |
 | ---- | ------ | ------------------------------------------------- |
@@ -200,10 +215,10 @@ last successful sub-step.
 
 ### Context Compression
 
-The [`context-management`](https://github.com/jonathan-vella/azure-agentic-infraops/blob/main/.github/skills/context-management/SKILL.md)
+The [`context-management`](https://github.com/jonathan-vella/apex/blob/main/.github/skills/context-management/SKILL.md)
 skill defines three runtime compression tiers for artifact loading (it replaces
 the legacy `context-shredding` and `context-optimizer` skills; for post-hoc
-analysis of past sessions, see the [`11-Context Optimizer`](./agents/) agent):
+analysis of past sessions, see the [`11-Context Optimizer`](../agents/) agent):
 
 | Tier         | Trigger    | Strategy                                   |
 | ------------ | ---------- | ------------------------------------------ |
@@ -257,10 +272,7 @@ set covers:
 | Hook                  | Trigger                                    | Purpose                                                             |
 | --------------------- | ------------------------------------------ | ------------------------------------------------------------------- |
 | `tool-guardian`       | `PreToolUse`                               | Blocks dangerous commands (destructive ops, force pushes, DB drops) |
-| `secrets-scanner`     | `Stop`                                     | Scans modified files for leaked secrets and credentials             |
-| `session-telemetry`   | `SessionStart`, `Stop`, `UserPromptSubmit` | Merged session lifecycle logging and governance audit               |
 | `subagent-validation` | `SubagentStop`                             | Validates subagent invocation and outputs                           |
-| `tool-audit`          | `PostToolUse`                              | Logs tool usage metadata (name, status)                             |
 
 Hooks are defined in `hooks.json` files with type (`command`), path to shell script,
 and timeout. They run automatically — agents do not invoke them explicitly.

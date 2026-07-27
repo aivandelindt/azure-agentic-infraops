@@ -10,12 +10,12 @@ gates across the lifecycle.
 
 The full documentation for this repository lives here:
 
-- [APEX documentation](https://jonathan-vella.github.io/azure-agentic-infraops/)
+- [APEX documentation](https://apexops.pro/)
 
 Key entry points:
 
-- [Accelerator template](https://github.com/jonathan-vella/azure-agentic-infraops-accelerator)
-- [MicroHack](https://jonathan-vella.github.io/microhack-agentic-infraops/)
+- [Accelerator template](https://github.com/jonathan-vella/apex-accelerator)
+- [MicroHack](https://microhack.apexops.pro/)
 - [Contributing guide](CONTRIBUTING.md)
 
 ## Workflow
@@ -112,10 +112,10 @@ sequenceDiagram
 For new projects, use the Accelerator template rather than cloning this repository
 directly.
 
-1. Create a repository from the [Accelerator template](https://github.com/jonathan-vella/azure-agentic-infraops-accelerator).
+1. Create a repository from the [Accelerator template](https://github.com/jonathan-vella/apex-accelerator).
 2. Open that repository in VS Code and reopen it in the dev container.
 3. Start with the published docs:
-   [https://jonathan-vella.github.io/azure-agentic-infraops/](https://jonathan-vella.github.io/azure-agentic-infraops/)
+   [https://apexops.pro/](https://apexops.pro/)
 
 ## What This Repository Contains
 

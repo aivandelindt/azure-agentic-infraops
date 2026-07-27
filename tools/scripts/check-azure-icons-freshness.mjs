@@ -12,8 +12,8 @@
  *   node tools/scripts/check-azure-icons-freshness.mjs --quiet   # silent unless drift
  */
 
-import fs from "node:fs";
 import path from "node:path";
+import { readJson } from "./_lib/json.mjs";
 
 const MANIFEST_PATH = path.join("assets", "drawio-libraries", "azure-icons", "manifest.json");
 const ICONS_PAGE_URL = "https://learn.microsoft.com/en-us/azure/architecture/icons/";
@@ -21,10 +21,6 @@ const ICONS_PAGE_URL = "https://learn.microsoft.com/en-us/azure/architecture/ico
 const args = new Set(process.argv.slice(2));
 const STRICT = args.has("--strict");
 const QUIET = args.has("--quiet");
-
-function readJson(p) {
-  return JSON.parse(fs.readFileSync(p, "utf8"));
-}
 
 function log(msg) {
   if (!QUIET) console.log(msg);
@@ -53,7 +49,7 @@ let upstreamHtml;
 try {
   const res = await fetch(ICONS_PAGE_URL, {
     headers: {
-      "User-Agent": "apex-icons-freshness-check/1.0 (+https://github.com/jonathan-vella/azure-agentic-infraops)",
+      "User-Agent": "apex-icons-freshness-check/1.0 (+https://github.com/jonathan-vella/apex)",
     },
   });
   if (!res.ok) {

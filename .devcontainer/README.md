@@ -6,7 +6,7 @@ This devcontainer provides a **complete, pre-configured development environment*
 It includes all required tools, extensions, and configurations to build Azure infrastructure
 with AI agents.
 
-**Base image:** `mcr.microsoft.com/devcontainers/base:ubuntu-24.04`
+**Base image:** `mcr.microsoft.com/devcontainers/base:ubuntu26.04` (`amd64` and `arm64`)
 
 ## What's Included
 
@@ -19,8 +19,8 @@ with AI agents.
 | Python                    | 3.14    | Diagrams, MCP servers, tooling    |
 | Node.js                   | LTS     | Validation scripts, npm tooling   |
 | GitHub CLI                | latest  | Repository operations             |
-| Terraform                 | latest  | IaC with TFLint v0.61.0           |
-| Go                        | 1.24.2  | Build Terraform MCP Server binary |
+| Terraform                 | latest  | Signed HashiCorp APT repository    |
+| Go                        | 1.26    | Build Terraform MCP Server binary  |
 | Deno                      | latest  | Draw.io MCP server runtime        |
 | Azure Developer CLI (azd) | latest  | Standardized Azure deployments    |
 
@@ -37,6 +37,7 @@ with AI agents.
 | 7    | PowerShell Az modules          | `Install-Module` — Accounts, Resources, Storage, Network, KeyVault, Websites |
 | 8    | Azure Pricing MCP Server       | Clean `.venv` rebuild + `pip install -e .[admin]` (always, per policy)       |
 | 9    | Terraform MCP Server           | `git clone` + `go build` to `/go/bin/`                                       |
+| 9.4  | TFLint v0.63.1                | GitHub release with SHA-256 verification                                     |
 | 9.5  | Terraform CLI hardening        | Ensures `TF_PLUGIN_CACHE_DIR` exists; `terraform version` smoke test         |
 | 10   | Python dependency verification | Validates imports against `requirements.txt`                                 |
 | 11   | apex-recall CLI                | `uv pip install -e` from `tools/apex-recall/`                                |
@@ -249,7 +250,7 @@ Runs on every container start. Lightweight updates only:
 | Stale tool versions        | Restart container (triggers `post-start.sh`)             |
 | Full rebuild needed        | `F1` → `Dev Containers: Rebuild Container Without Cache` |
 
-Full troubleshooting guide: [Troubleshooting](https://jonathan-vella.github.io/azure-agentic-infraops/guides/troubleshooting/)
+Full troubleshooting guide: [Troubleshooting](https://apexops.pro/guides/troubleshooting/)
 
 ## Resource Usage
 
@@ -270,8 +271,8 @@ Full troubleshooting guide: [Troubleshooting](https://jonathan-vella.github.io/a
 
 ## Related Documentation
 
-- [Workflow Guide](https://jonathan-vella.github.io/azure-agentic-infraops/concepts/workflow/)
-- [Prompt Guide](https://jonathan-vella.github.io/azure-agentic-infraops/guides/prompt-guide/)
-- [Troubleshooting](https://jonathan-vella.github.io/azure-agentic-infraops/guides/troubleshooting/)
+- [Workflow Guide](https://apexops.pro/concepts/workflow/)
+- [Prompt Guide](https://apexops.pro/guides/prompt-guide/)
+- [Troubleshooting](https://apexops.pro/guides/troubleshooting/)
 - [Copilot Instructions](../.github/copilot-instructions.md)
 - [Repository README](../README.md)

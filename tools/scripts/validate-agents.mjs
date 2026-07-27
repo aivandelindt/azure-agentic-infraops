@@ -14,7 +14,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import yaml from "js-yaml";
+// Namespace import (not `import yaml from "js-yaml"`): js-yaml 5.x is pure ESM
+// and exposes named exports only — no default export. A namespace import works
+// under both js-yaml 4.x (CommonJS) and 5.x (ESM).
+import * as yaml from "js-yaml";
 import { getAgents, getPromptFiles } from "./_lib/workspace-index.mjs";
 import { getBody } from "./_lib/parse-frontmatter.mjs";
 import { Reporter } from "./_lib/reporter.mjs";
@@ -369,6 +372,7 @@ function classifyModel(modelStr) {
   if (lower.includes("gpt-5.4")) return "gpt-5.4";
   if (lower.includes("gpt-5.3") || lower.includes("codex")) return "gpt-codex";
   if (lower.includes("gpt-4o")) return "gpt-4o";
+  if (lower.includes("mai-code") || lower.includes("mai code")) return "mai-code";
   return "unknown";
 }
 
@@ -518,7 +522,7 @@ function runModelAlignment() {
   }
 
   // Check 4: Claude non-ONE-SHOT research agents missing investigate block
-  const INVESTIGATE_AGENTS = ["03-architect", "05-iac-planner", "09-diagnose", "11-context-optimizer"];
+  const INVESTIGATE_AGENTS = ["03-architect", "05-iac-planner", "11-context-optimizer"];
 
   console.log("  Check 4: Claude investigate_before_answering");
   {
@@ -626,8 +630,7 @@ const VENDOR_RULES = [
     id: "frontmatter-model-style-001",
     severity: "error",
     appliesTo: "both",
-    sourceUrl:
-      "https://github.com/jonathan-vella/azure-agentic-infraops/blob/main/.github/instructions/agent-authoring.instructions.md",
+    sourceUrl: "https://github.com/jonathan-vella/apex/blob/main/.github/instructions/agent-authoring.instructions.md",
   },
   {
     id: "claude-output-contract-001",
@@ -640,8 +643,7 @@ const VENDOR_RULES = [
     id: "handoff-enrichment-001",
     severity: "warn",
     appliesTo: "agent",
-    sourceUrl:
-      "https://github.com/jonathan-vella/azure-agentic-infraops/blob/main/.github/instructions/agent-authoring.instructions.md",
+    sourceUrl: "https://github.com/jonathan-vella/apex/blob/main/.github/instructions/agent-authoring.instructions.md",
   },
   {
     id: "personality-scoping-001",
@@ -655,7 +657,7 @@ const VENDOR_RULES = [
     severity: "error",
     appliesTo: "prompt",
     sourceUrl:
-      "https://github.com/jonathan-vella/azure-agentic-infraops/blob/main/.github/instructions/vendor-prompting.instructions.md#prompt-model-source",
+      "https://github.com/jonathan-vella/apex/blob/main/.github/instructions/vendor-prompting.instructions.md#prompt-model-source",
   },
 ];
 
@@ -672,6 +674,7 @@ const FAMILY_STATUS = {
   "gpt-5.4": "deprecated",
   "gpt-codex": "reviewer-only",
   "gpt-4o": "reviewer-only",
+  "mai-code": "reviewer-only",
   unknown: "enforced",
 };
 
@@ -831,7 +834,7 @@ function checkModelDeprecation(r, agent, file, family, deprecatedSet) {
         "model-deprecation-001",
         family,
         file,
-        `Model "${m}" matches deprecated label "${dep}" — see validate-deprecated-models.mjs`,
+        `Model "${m}" matches deprecated label "${dep}" — see validate-models.mjs --only=deprecated`,
       );
       return;
     }
@@ -1009,11 +1012,11 @@ function emit(r, ruleId, family, file, message) {
 
 /**
  * Load the deprecated-model labels by parsing
- * tools/scripts/validate-deprecated-models.mjs source. Light grep — avoids
+ * tools/scripts/validate-models.mjs source. Light grep — avoids
  * importing the whole script.
  */
 function loadDeprecatedModels() {
-  const file = "tools/scripts/validate-deprecated-models.mjs";
+  const file = "tools/scripts/validate-models.mjs";
   if (!fs.existsSync(file)) return new Set();
   const src = fs.readFileSync(file, "utf-8");
   // Patterns like: "Claude Opus 4.6", or DEPRECATED_MODELS = [...]
@@ -1105,35 +1108,35 @@ const WORKFLOW_HANDOFF_RULES = [
     severity: "warn",
     appliesTo: "agent",
     sourceUrl:
-      "https://github.com/jonathan-vella/azure-agentic-infraops/blob/main/.github/skills/workflow-engine/references/handoff-validation-rules.md#b1a",
+      "https://github.com/jonathan-vella/apex/blob/main/.github/skills/workflow-engine/references/handoff-validation-rules.md#b1a",
   },
   {
     id: "workflow-handoff-artifact-sync-001",
     severity: "warn",
     appliesTo: "agent",
     sourceUrl:
-      "https://github.com/jonathan-vella/azure-agentic-infraops/blob/main/.github/skills/workflow-engine/references/handoff-validation-rules.md#b2",
+      "https://github.com/jonathan-vella/apex/blob/main/.github/skills/workflow-engine/references/handoff-validation-rules.md#b2",
   },
   {
     id: "workflow-handoff-self-loop-bound-001",
     severity: "warn",
     appliesTo: "agent",
     sourceUrl:
-      "https://github.com/jonathan-vella/azure-agentic-infraops/blob/main/.github/skills/workflow-engine/references/handoff-validation-rules.md#b3",
+      "https://github.com/jonathan-vella/apex/blob/main/.github/skills/workflow-engine/references/handoff-validation-rules.md#b3",
   },
   {
     id: "workflow-handoff-track-parity-001",
     severity: "warn",
     appliesTo: "agent",
     sourceUrl:
-      "https://github.com/jonathan-vella/azure-agentic-infraops/blob/main/.github/skills/workflow-engine/references/handoff-validation-rules.md#b4",
+      "https://github.com/jonathan-vella/apex/blob/main/.github/skills/workflow-engine/references/handoff-validation-rules.md#b4",
   },
   {
     id: "workflow-handoff-subagent-dispatch-001",
     severity: "warn",
     appliesTo: "agent",
     sourceUrl:
-      "https://github.com/jonathan-vella/azure-agentic-infraops/blob/main/.github/skills/workflow-engine/references/handoff-validation-rules.md#b5",
+      "https://github.com/jonathan-vella/apex/blob/main/.github/skills/workflow-engine/references/handoff-validation-rules.md#b5",
   },
 ];
 

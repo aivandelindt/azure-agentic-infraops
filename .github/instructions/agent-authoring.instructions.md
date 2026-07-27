@@ -111,7 +111,7 @@ tools: [read/readFile, edit/createFile, agent, "azure-mcp/*"]
 
 **Source of truth:** the agent's frontmatter `model` field is canonical. The
 [`tools/registry/agent-registry.json`](../../tools/registry/agent-registry.json) entry
-mirrors it (verified by `validate-model-consistency.mjs`). The
+mirrors it (verified by `validate-models.mjs --only=consistency`). The
 [`.github/model-catalog.json`](../model-catalog.json) file is documentation only —
 it records authorized models and intended use cases but is **not** enforced by any
 validator. To change a model, update the agent frontmatter first, then mirror the
@@ -133,22 +133,36 @@ Agents that specify `Claude Opus 4.7` as priority model do so deliberately:
   use `Claude Opus 4.7` for architecture decisions, WAF assessments, planning
   accuracy, and complex analysis. Reasoning effort is a per-agent policy (see
   "Reasoning-effort policy" below) — not encoded in the model label.
-- **Claude Sonnet 4.6 agents** (design, bicep codegen, terraform codegen, plus
-  the four IaC validation/preview subagents `bicep-validate`, `bicep-whatif`,
-  `terraform-validate`, `terraform-plan`): Anthropic prompting style (XML-tagged
-  blocks, role-first, quote-grounded review, checklist-driven structured output)
-  suits ADR + diagram authoring, AVM-first IaC code generation with verbatim
-  invariant retention, and the structured PASS/FAIL findings produced by the
-  validation subagents. Default Sonnet 4.6 effort is `high`; the Design agent,
-  both CodeGen agents, and the four subagents pin effort to `medium` for typical
-  work and only raise it for large change sets.
-- **GPT-5.5 agents** (orchestrator, orchestrator fast path, governance,
+- **Claude Sonnet 5 agents** (design, bicep codegen, terraform codegen,
+  as-built, plus the four IaC validation/preview subagents `bicep-validate`,
+  `bicep-whatif`, `terraform-validate`, `terraform-plan`): Anthropic prompting
+  style (XML-tagged blocks, `<context_awareness>`, `<output_contract>`,
+  `<scope_fencing>`, role-first, checklist-driven structured output) suits
+  ADR + diagram authoring, AVM-first IaC code generation with verbatim
+  invariant retention, the structured PASS/FAIL findings produced by the
+  validation subagents, and the checklist-driven Step 7 as-built artifact suite.
+  Default Sonnet 5 effort is `high` (adaptive thinking on by default, manual
+  extended thinking removed); the Design agent, both CodeGen agents,
+  as-built, and the four subagents pin effort to `medium` for typical work and
+  only raise it for large change sets. CodeGen stays at `high` rather than
+  escalating to `xhigh` — AVM generation is structured execution, not deep
+  reasoning.
+- **GPT-5.5 agents** (orchestrator fast path, governance,
   challenger wrapper, challenger-review-subagent, deploy (Bicep + Terraform),
-  as-built, diagnose, e2e-orchestrator)
+  diagnose, e2e-orchestrator)
   use the OpenAI GPT-5.5 prompting style: explicit Role / Personality / Goal /
   Success / Constraints / Output / Stop sections, retrieval budgets, decision rules
   over absolutes, and stopping conditions. GPT-5.5 reasons more efficiently than
   predecessors — re-evaluate `low`/`medium` reasoning effort before escalating
+- **GPT-5.4 mini prompts** (utility/CLI prompts such as apex-git-commit,
+  apex-debug-log-export) use the same GPT-5.x prompting style as the GPT-5.5
+  cohort (per vendor-prompting `family-support.md` — GPT-5.4 shares the OpenAI
+  cohort rules). Lower-cost tier suits deterministic CLI workflows.
+- **MAI-Code-1-Flash agents** (orchestrator) run Microsoft's fast coding model
+  for handoff-only routing with no creative generation. The `mai-code` family
+  is `reviewer-only` in vendor-prompting — no MAI-specific automated rules yet;
+  the orchestrator body keeps its outcome-first skeleton as a sound routing
+  structure.
 - **GPT-5.3-Codex subagents** handle narrow, high-throughput tasks (cost estimation)
 
 #### GPT-5.5 prompting style (summary)
@@ -172,29 +186,29 @@ Current model assignments:
 
 | Agent / Group                       | Model             | Rationale                                |
 | ----------------------------------- | ----------------- | ---------------------------------------- |
-| Orchestrator                        | GPT-5.5           | Outcome-first orchestration              |
+| Orchestrator                        | MAI-Code-1-Flash  | Standard-tier handoff routing            |
 | Orchestrator (Fast Path)            | GPT-5.5           | Streamlined orchestration                |
-| Requirements                        | Claude Opus 4.7   | Deep understanding (high effort)         |
-| Architect                           | Claude Opus 4.7   | WAF analysis + cost (high effort)        |
-| Design                              | Claude Sonnet 4.6 | Diagram + ADR (Anthropic style)          |
+| Requirements                        | Claude Sonnet 5   | One-shot discovery (Anthropic style)     |
+| Architect                           | Claude Opus 4.8   | WAF analysis + cost (high effort)        |
+| Design                              | Claude Sonnet 5   | Diagram + ADR (Anthropic style)          |
 | Governance                          | GPT-5.5           | Procedural discovery                     |
-| IaC Planner (unified)               | Claude Opus 4.7   | Planning accuracy (high effort)          |
-| Bicep / Terraform Code              | Claude Sonnet 4.6 | Code generation (Anthropic style, verbatim invariants) |
+| IaC Planner (unified)               | Claude Opus 4.8   | Planning accuracy (high effort)          |
+| Bicep / Terraform Code              | Claude Sonnet 5   | Code generation (Anthropic style, verbatim invariants) |
 | Deploy (Bicep + TF)                 | GPT-5.5           | Deployment execution (outcome-first)     |
-| As-Built                            | GPT-5.5           | Documentation generation (outcome-first) |
+| As-Built                            | Claude Sonnet 5   | Documentation generation (Anthropic style) |
 | Diagnose                            | GPT-5.5           | Approval-first diagnostics               |
-| Context Optimizer                   | Claude Opus 4.7   | Deep analysis (high effort)              |
+| Context Optimizer                   | Claude Sonnet 5   | Structured analysis (Anthropic style)    |
 | E2E Orchestrator                    | GPT-5.5           | Autonomous benchmark loop                |
 | Challenger wrapper                  | GPT-5.5           | Structured review                        |
 | Challenger subagent                 | GPT-5.5           | Structured review                        |
-| Bicep/TF validate+preview subagents | Claude Sonnet 4.6 | Isolated validation (Anthropic style)    |
+| Bicep/TF validate+preview subagents | Claude Sonnet 5   | Isolated validation (Anthropic style)    |
 | Cost estimate subagent              | GPT-5.3-Codex     | High-throughput pricing                  |
 
 #### Reasoning-effort policy
 
 Reasoning effort is a **per-agent** policy, not a model-label suffix. The
 catalog records one entry per Anthropic SKU (`Claude Opus 4.7`,
-`Claude Sonnet 4.6`); whether an agent runs at default or high reasoning
+`Claude Sonnet 5`); whether an agent runs at default or high reasoning
 effort is documented in this section and inferred from the agent's role:
 
 - **High effort** — Requirements, Architect, IaC Planner, Context Optimizer.
@@ -215,11 +229,11 @@ effort is documented in this section and inferred from the agent's role:
 
 - Agent frontmatter is canonical (`.github/agents/**/*.agent.md`).
 - The agent registry mirrors frontmatter (enforced by
-  `validate-model-consistency.mjs`).
+  `validate-models.mjs --only=consistency`).
 - The model catalog (`.github/model-catalog.json`) authorizes labels via its
   hand-maintained `models` block and mirrors the canonical assignments via
   its auto-generated `assignments` block (enforced by
-  `validate-model-catalog.mjs`).
+  `validate-models.mjs --only=catalog`).
 - The `assignments` block is regenerated by
   `node tools/scripts/generate-model-catalog.mjs` and refreshed automatically
   by the lefthook pre-commit hook whenever an agent frontmatter file is
@@ -505,6 +519,36 @@ build if an agent body documents the forbidden invocation.
 Equivalent prohibition for `npm run lint:md` and
 `npm run lint:artifact-templates` against `agent-output/**`: do not
 invoke either from inside an agent body. Delegate to pre-commit + CI.
+
+### Execution-subagent invocation contract
+
+When a parent agent calls `runSubagent` for an execution-style
+subagent (validate, what-if, plan, policy-precheck, cost-estimate,
+challenger-review), the `prompt` string MUST follow the three-H2
+shape declared at
+[`tools/apex-prompts/utility-prompts/execution-subagent.prompt.md`](../../tools/apex-prompts/utility-prompts/execution-subagent.prompt.md):
+
+1. `## Inputs` — what the parent needs (≤ 4 sentences).
+2. `## Activities` — exact bash / tool steps to run.
+3. `## Outputs` — schema name, verdict enum, or bounded markdown
+   summary; include the failure mode.
+
+This contract is documented in the template above. It targets the
+runtime prompt string, not the subagent body. The structural
+guardrail (`tests/scripts/test_execution_subagent_contract.mjs`)
+enforces that the template file itself remains intact.
+
+### No-shell-writes-to-agent-output rule
+
+Agents and subagents must **never** write to `agent-output/**` via
+shell heredocs, `>`/`>>` redirects, or `tee`. All artifact writes
+(including JSON sidecars such as `06-policy-precheck.json`,
+`05-cost-estimate.json`, `06-bicep-whatif.json`) go through the
+file-editing tools (`create_file`, `replace_string_in_file`,
+`multi_replace_string_in_file`). Read-only inspection
+(`ls`/`cat`/`wc -l`) is fine. Enforced by `tools/scripts/safe-shell.mjs`
+via the `agent-output-no-heredoc` rule; details in
+[`no-heredoc.instructions.md`](no-heredoc.instructions.md).
 
 ### Challenger-subagent fallback rule
 

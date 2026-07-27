@@ -12,7 +12,7 @@ Every agent definition follows a standard structure:
 ---
 name: 06b-Bicep CodeGen
 description: Expert Azure Bicep IaC specialist...
-model: ["Claude Sonnet 4.6"] # (1)!
+model: ["Claude Sonnet 5"] # (1)!
 tools: [list of allowed tools] # (2)!
 handoffs:
   - label: "Step 6: Deploy"
@@ -76,6 +76,47 @@ For a live, always-current roster, see the
 [Architecture Explorer](../../../reference/architecture-explorer/). The count is
 computed from `tools/registry/count-manifest.json` and the source of truth is the
 `.github/agents/*.agent.md` files on disk.
+
+## First-run project decisions (`iac_tool`, `review_depth`)
+
+The **01-Orchestrator** captures two project-scoped decisions the first
+time a project boots (or during the first approval gate after `apex-recall
+init`). Both are persisted to `apex-recall` and **never re-asked** —
+every downstream agent reads them via `apex-recall show <project>
+--json`.
+
+| Decision        | Default                                              | When asked                             | Persistence key         |
+| --------------- | ---------------------------------------------------- | -------------------------------------- | ----------------------- |
+| `iac_tool`      | none (must be chosen)                                | Step 1 (Requirements), Phase 2         | `decisions.iac_tool`    |
+| `review_depth`  | `default` — single-pass `comprehensive` (recommended) | Project boot or first gate after init  | `decisions.review_depth` |
+
+**`review_depth` values**:
+
+- `default` — one comprehensive challenger pass at Steps 1, 2, 4 (plus
+  `governance-reconciliation` at Step 3.5). Right for most workshops,
+  MVPs, and single-region projects.
+- `deep` — rotating-lens multi-pass cascade per
+  [`adversarial-review-protocol.md`](https://github.com/jonathan-vella/apex/blob/main/.github/skills/azure-defaults/references/adversarial-review-protocol.md)
+  (Pass 1 security-governance → Pass 2 architecture-reliability →
+  conditional Pass 3 cost-feasibility). Worth the ~3× challenger
+  cost for regulated workloads (HIPAA/PCI), prod migrations, or
+  multi-region designs.
+
+**Changing the value later** — `01-Orchestrator` writes once and never
+re-prompts. To switch a project from `default` to `deep` (or vice
+versa) after boot, edit the persisted decision directly:
+
+```bash
+apex-recall decide <project> --key review_depth --value deep --rationale "Escalated to deep review after Step 2 reliability gap" --json
+```
+
+Alternatively, escalate a **single** artifact without flipping the
+whole project by invoking the `10-Challenger` user-invocable agent
+manually — it runs the rotating-lens passes against one file on
+demand.
+
+Authoritative contract: [01-orchestrator.agent.md
+→ `Computing decisions.review_depth`](https://github.com/jonathan-vella/apex/blob/main/.github/agents/01-orchestrator.agent.md#computing-decisionsreview_depth-project-scoped-opt-in).
 
 ## Per-Step User Gates (Architect, Design, Governance)
 
@@ -226,9 +267,11 @@ Model selection depends on the task. Use `tools/registry/agent-registry.json` as
 source of truth, but the current repo pattern is:
 
 - **Planning agents** (accuracy-first) — typically `Claude Opus 4.7` at high reasoning effort
-- **Orchestrator** — `GPT-5.5` with the OpenAI outcome-first prompting style
-  (Role / Personality / Goal / Success / Constraints / Output / Stop)
-- **Design + Code generation** — `Claude Sonnet 4.6` for Anthropic XML-tagged
+- **Orchestrator** — `MAI-Code-1-Flash`, Microsoft's fast coding model. Standard
+  tier suits handoff-only routing without creative generation; the agent body
+  keeps its outcome-first skeleton (Role / Goal / Success / Constraints / Output /
+  Stop) as a sound routing structure.
+- **Design + Code generation** — `Claude Sonnet 5` for Anthropic XML-tagged
   output contracts and stronger verbatim invariant retention (security baseline,
   AVM contract, HARD GATE language)
 - **Governance + Challenger** — `GPT-5.5` for balanced execution quality with

@@ -14,8 +14,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import Ajv from "ajv/dist/2020.js";
-import addFormats from "ajv-formats";
+import { createAjv } from "./_lib/ajv-validator.mjs";
 import { ARTIFACT_HEADINGS } from "./_lib/artifact-headings.mjs";
 
 // ============================================================================
@@ -470,6 +469,19 @@ function validateDiagramArtifactFiles(filePath, artifactName, reportFn = warn) {
     if (!exists(sourcePath)) {
       reportFn(`${filePath} requires diagram source artifact: ${expected.source}`, { filePath, line: 1 });
     }
+
+    // Warn-only: Python-generated PNGs should ship with a paired SVG sibling
+    // (issue #421 — emitted automatically by `scripts/diagram_io.py`).
+    if (expected.image.endsWith(".png")) {
+      const svgSibling = expected.image.replace(/\.png$/, ".svg");
+      const svgPath = path.normalize(path.join(artifactDir, svgSibling.replace(/^\.\//, "")));
+      if (!exists(svgPath)) {
+        warn(`${filePath} is missing recommended SVG sibling: ${svgSibling} (generate via scripts/diagram_io.py)`, {
+          filePath,
+          line: 1,
+        });
+      }
+    }
   }
 }
 
@@ -769,7 +781,10 @@ function validateGovernanceDiscovery(relPath, text, reportFn = error) {
 function validateNoDuplicateH1(relPath) {
   if (!exists(relPath)) return;
   const text = readText(relPath);
-  const h1Matches = text.match(/^# .+$/gm) || [];
+  // Strip fenced code blocks so shell comments (e.g. "# Start AKS") are not
+  // miscounted as Markdown H1 headings.
+  const withoutFences = text.replace(/^```[\s\S]*?^```/gm, "");
+  const h1Matches = withoutFences.match(/^# .+$/gm) || [];
   if (h1Matches.length > 1) {
     error(
       `Artifact ${relPath} has ${h1Matches.length} H1 headers — likely a resumed artifact with duplicate body. Fix: Delete and recreate the file.`,
@@ -925,9 +940,7 @@ function getGovernanceValidator() {
     return false;
   }
   const schema = JSON.parse(readText(GOVERNANCE_SCHEMA_PATH));
-  const ajv = new Ajv({ allErrors: true, strict: false });
-  addFormats(ajv);
-  _governanceValidator = ajv.compile(schema);
+  _governanceValidator = createAjv().compile(schema);
   return _governanceValidator;
 }
 

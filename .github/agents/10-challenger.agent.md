@@ -10,11 +10,7 @@ tools:
     execute,
     read,
     agent,
-    browser,
     edit,
-    search,
-    web,
-    todo,
   ]
 agents: ["challenger-review-subagent"]
 handoffs:
@@ -92,6 +88,17 @@ the Orchestrator with an apply summary.
     `defer` with a note pointing to the owning agent.
   - Honor `APEX_UNATTENDED=1` per protocol section 2d (auto-defer,
     no apply, no `askQuestions`).
+- Failure handling:
+  - If `challenger-review-subagent` errors, times out, or returns
+    malformed/absent JSON (distinct from a clean review with findings),
+    retry once. If it fails again, stop and surface the error via
+    `askQuestions` (Retry / Skip review / Abort) — never fabricate findings
+    or hand off as if the review passed.
+  - If the apply step (`multi_replace_string_in_file`) fails, do not
+    re-emit the artifact via `create_file`; report which Accepted findings
+    were not applied and leave the artifact untouched for a retry.
+  - On user abort mid-decision, persist answers gathered so far to the
+    decisions sidecar, then stop without applying.
 - Reasoning effort: rely on the Copilot runtime default. Adversarial
   review is structured I/O around the subagent — elevated reasoning
   is unnecessary.
@@ -125,6 +132,10 @@ Per Output Contract:
 This agent orchestrates 1 subagent — `challenger-review-subagent` (unified, supports single-lens and batch modes).
 For simple single-pass reviews, invoke with review_focus + pass_number.
 For multi-pass reviews, invoke with batch_lenses array to run remaining lenses in one invocation.
+
+Every `runSubagent` invocation prompt MUST follow the three-H2 contract at
+[`tools/apex-prompts/utility-prompts/execution-subagent.prompt.md`](../../tools/apex-prompts/utility-prompts/execution-subagent.prompt.md)
+(`## Inputs` / `## Activities` / `## Outputs`). Issue #425.
 
 You are a delegation wrapper for standalone adversarial reviews.
 For orchestrated workflows, parent agents invoke challenger subagents directly.
@@ -203,12 +214,22 @@ Invoke `challenger-review-subagent` with:
 
 1. The subagent writes the JSON to `output_path` and returns a compact
    summary (≤15 lines). **Do NOT paste subagent JSON inline.**
-2. **Present findings directly in chat** — read the JSON file from disk to
-   render a markdown table with columns:
-   **ID**, **Severity**, **Title**, **WAF Pillar**, **Recommendation**
-   — list every finding from the JSON (must_fix first, then should_fix, then suggestion).
-   Show totals: `N must-fix, N should-fix, N suggestion`.
-   Reference the JSON file path for machine-readable details.
+2. **Present findings directly in chat** — read the JSON file from disk and
+   print a **multi-line markdown table** (not a single-line string with
+   escaped `\n`). Leave blank lines before and after the table. Format:
+
+   ```markdown
+   **Challenger Findings**
+
+   | ID | Severity | Title | WAF Pillar | Recommendation |
+   | --- | --- | --- | --- | --- |
+   | {id} | {severity} | {title} | {waf_pillar} | {recommendation} |
+
+   **Totals:** N must-fix, N should-fix, N suggestions.
+   Machine-readable detail is in `challenge-findings-{type}.json`.
+   ```
+
+   List every finding (must_fix first, then should_fix, then suggestion).
 
 ## Per-Finding Decision + Apply + Handoff
 

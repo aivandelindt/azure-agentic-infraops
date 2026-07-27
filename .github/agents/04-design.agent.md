@@ -1,14 +1,14 @@
 ---
 name: 04-Design
-model: ["Claude Sonnet 4.6"]
+model: ["Claude Sonnet 5"]
 description: "Step 3 — Design Artifacts. Generates architecture diagrams (Draw.io or Python) and Architecture Decision Records (azure-adr skill) for Azure infrastructure. Optional step — users can skip to Implementation Planning."
 user-invocable: true
 agents: ["challenger-review-subagent"]
-tools: [vscode/askQuestions, vscode/memory, vscode/runCommand, execute/runInTerminal, read/terminalSelection, read/terminalLastCommand, read/getNotebookSummary, read/problems, read/readFile, read/viewImage, read/readNotebookCellOutput, agent/runSubagent, edit/createDirectory, edit/createFile, edit/createJupyterNotebook, edit/editFiles, edit/editNotebook, edit/rename, search/codebase, search/fileSearch, search/listDirectory, search/textSearch, search/usages, drawio/add-cells, drawio/add-cells-to-group, drawio/clear-diagram, drawio/create-groups, drawio/create-layer, drawio/delete-cell-by-id, drawio/edit-cells, drawio/edit-edges, drawio/export-diagram, drawio/finish-diagram, drawio/get-diagram-stats, drawio/get-shape-categories, drawio/get-shapes-in-category, drawio/get-style-presets, drawio/import-diagram, drawio/list-group-children, drawio/list-layers, drawio/list-paged-model, drawio/move-cell-to-layer, drawio/remove-cell-from-group, drawio/search-shapes, drawio/set-active-layer, drawio/set-cell-shape, drawio/suggest-group-sizing, drawio/validate-group-containment, todo, ms-python.python/getPythonEnvironmentInfo, ms-python.python/getPythonExecutableCommand, ms-python.python/installPythonPackage, ms-python.python/configurePythonEnvironment]
+tools: [vscode, execute, read, agent, browser, vscodeGeneral/rename, vscodeGeneral/usages, vscodeNotebooks/createJupyterNotebook, vscodeNotebooks/editNotebook, ms-python.python, edit, search, web, 'drawio/*', todo]
 handoffs:
   - label: "▶ Generate Diagram"
     agent: 04-Design
-    prompt: "This handoff implies `design_scope=diagrams` — record via `apex-recall decide <project> --key design_scope --value diagrams --step 3 --json` BEFORE any other work. Input: `agent-output/{project}/02-architecture-assessment.md` (used for both diagram paths). Then use the `vscode_askQuestions` tool with exactly one question: header='Diagram Tool', question='Which diagram tool do you prefer?', options=[{label:'Draw.io',description:'Rich Azure icon set — interactive .drawio + .png output (recommended)',recommended:true},{label:'Python',description:'Code-based .png output via the python-diagrams skill'}], allowFreeformInput=false. Wait for the answer. Map 'Draw.io' → diagram_tool=drawio, 'Python' → diagram_tool=python. Record `apex-recall decide <project> --key diagram_tool --value <drawio|python> --step 3 --json`. Then proceed: on `drawio`, generate an Azure architecture diagram using the drawio skill and MCP tools (transactional mode — pass `diagram_xml` between every call; `search-shapes` once for all services, `create-groups` once for all containers, `add-cells` once with all vertices + edges, `add-cells-to-group` once, `finish-diagram` compress:true; save via `python3 tools/scripts/save-drawio.py <json-path> agent-output/{project}/03-des-diagram.drawio`; validate via `node tools/scripts/validate-drawio-files.mjs`; quality score >= 9/10; output: `agent-output/{project}/03-des-diagram.drawio + .png`); on `python`, use the python-diagrams skill to generate `agent-output/{project}/03-des-diagram.png`."
+    prompt: "This handoff implies `design_scope=diagrams` — record via `apex-recall decide <project> --key design_scope --value diagrams --step 3 --json` BEFORE any other work. Input: `agent-output/{project}/02-architecture-assessment.md` (used for both diagram paths). Then use the `vscode_askQuestions` tool with exactly one question: header='Diagram Tool', question='Which diagram tool do you prefer?', options=[{label:'Draw.io',description:'Rich Azure icon set — interactive .drawio + .png output (recommended)',recommended:true},{label:'Python',description:'Code-based .png + .svg output via the python-diagrams skill'}], allowFreeformInput=false. Wait for the answer. Map 'Draw.io' → diagram_tool=drawio, 'Python' → diagram_tool=python. Record `apex-recall decide <project> --key diagram_tool --value <drawio|python> --step 3 --json`. Then proceed: on `drawio`, generate an Azure architecture diagram using the drawio skill and MCP tools (transactional mode — pass `diagram_xml` between every call; `search-shapes` once for all services, `create-groups` once for all containers, `add-cells` once with all vertices + edges, `add-cells-to-group` once, `finish-diagram` compress:true; save via `python3 tools/scripts/save-drawio.py <json-path> agent-output/{project}/03-des-diagram.drawio`; validate via `node tools/scripts/validate-drawio-files.mjs`; quality score >= 9/10; output: `agent-output/{project}/03-des-diagram.drawio + .png`); on `python`, use the python-diagrams skill to generate `agent-output/{project}/03-des-diagram.py` + `.png` + `.svg` (both raster and vector siblings via the shared `scripts/diagram_io.py` helper)."
     send: true
   - label: "▶ Generate ADR"
     agent: 04-Design
@@ -28,7 +28,7 @@ handoffs:
     send: false
   - label: "↩ Return to Orchestrator"
     agent: 01-Orchestrator
-    prompt: "Returning from Step 3 (Design). Architecture diagrams, ADRs, and optional cost estimates generated. Artifacts at `agent-output/{project}/03-des-*.md` (diagram output depends on tool chosen: `03-des-diagram.drawio` for Draw.io, `03-des-diagram.py + .png` for Python). Ready for governance discovery or IaC planning."
+    prompt: "Returning from Step 3 (Design). Architecture diagrams, ADRs, and optional cost estimates generated. Artifacts at `agent-output/{project}/03-des-*.md` (diagram output depends on tool chosen: `03-des-diagram.drawio` for Draw.io, `03-des-diagram.py + .png + .svg` for Python). Ready for governance discovery or IaC planning."
     send: false
 ---
 
@@ -44,6 +44,16 @@ that have already been approved.
 This is **Step 3** of the workflow and is **optional**. Users can skip directly
 to Step 3.5 (Governance) or Step 4 (IaC Planning).
 </role>
+
+<context_awareness>
+This agent visualises already-approved decisions; it does not invent new
+architecture. Keep the window lean: read each `SKILL.md` once (`drawio` or
+`python-diagrams`, plus `azure-adr`), use `apex-recall show <project>
+--json` for cached decisions instead of re-reading artifacts, and never
+edit the upstream architecture assessment. Draw.io diagrams run in
+transactional mode — thread `diagram_xml` between every MCP call rather
+than reloading diagram state.
+</context_awareness>
 
 ## Operating frame
 
@@ -65,7 +75,7 @@ investigate before answering) live in
 Expected output in `agent-output/{project}/`:
 
 - `03-des-diagram.drawio` + `.png` — architecture diagram (Draw.io path)
-- `03-des-diagram.py` + `.png` — architecture diagram (Python path)
+- `03-des-diagram.py` + `.png` + `.svg` — architecture diagram (Python path, dual-format via `diagram_io`)
 - `03-des-adr-NNNN-{slug}.md` — Architecture Decision Records (one file per
   decision)
 - `03-des-cost-estimate.md` — cost-estimate handoff (optional)
@@ -116,8 +126,9 @@ Do not load either skill before `decisions.diagram_tool` is known.
 
 ## Effort and tool-use calibration
 
-This agent runs on Claude Sonnet 4.6, which defaults to `effort: high`. Tune
-that default for the work this agent does:
+This agent runs on Claude Sonnet 5, which defaults to `effort: high` and runs
+with adaptive thinking on by default. Tune that default for the work this
+agent does:
 
 - Use **medium** effort for typical diagram + ADR work. The work is
   structured rather than exploratory; high effort produces no measurable
@@ -215,6 +226,9 @@ Sequence:
 
 If the diagram needs more than two post-save adjustments, run `clear-diagram`
 and rebuild from a clean base layout. Patch-and-retry rarely beats rebuild.
+If a clean rebuild still fails validation (`validate-drawio-files.mjs` errors
+or quality score < 9/10), stop and surface the error to the user rather than
+looping a third time.
 
 After the file is saved, delete any temp JSON or working files you created;
 they are not part of the output contract.
@@ -398,8 +412,15 @@ with `artifact_type = "design-adr"`, `review_focus = "comprehensive"`,
 and `output_path =
 agent-output/{project}/challenge-findings-design-adr-<n>.json`. The
 design step does not gate on findings — present them informationally.
-Surface any `requires_step == "step-2"` finding explicitly so the user
-can decide whether to re-open the architecture.
+If the challenger subagent itself errors or times out, log it via
+`apex-recall finding` and continue — the optional ADR review never blocks
+artifact completion. Surface any `requires_step == "step-2"` finding
+explicitly so the user can decide whether to re-open the architecture.
+
+Compose the runtime `prompt` string per
+[tools/apex-prompts/utility-prompts/execution-subagent.prompt.md](../../tools/apex-prompts/utility-prompts/execution-subagent.prompt.md)
+— the three required H2s are `## Inputs`, `## Activities`,
+`## Outputs` (issue #425).
 
 Detailed invocation contract:
 [`azure-adr/references/step-3-adr-review.md`](../skills/azure-adr/references/step-3-adr-review.md).

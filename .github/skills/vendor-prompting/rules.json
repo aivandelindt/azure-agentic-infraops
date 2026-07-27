@@ -28,19 +28,28 @@
       "fetched_at": "2026-05-04T00:00:00Z",
       "sha256": "563784eb13ad1b44c3a592f940aa7ac2086ebeb97df3f4a09ba038b2f1564d39",
       "fetch_method": "gh-api"
+    },
+    {
+      "id": "anthropic-prompting-claude-sonnet-5",
+      "vendor": "anthropic",
+      "url": "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5",
+      "ref": null,
+      "fetched_at": "2026-06-30T20:01:04.090Z",
+      "sha256": "87f4ff8e5a530d8d3282044247cb8ddae857f1c89ee0735751109af2a22fda10",
+      "fetch_method": "fetch-webpage"
     }
   ],
   "families": [
     {
       "family": "claude-opus",
       "status": "enforced",
-      "label_examples": ["Claude Opus 4.7", "Claude Opus 4.6"],
+      "label_examples": ["Claude Opus 4.8", "Claude Opus 4.7"],
       "rule_subset_note": "All Claude rules apply at default severity."
     },
     {
       "family": "claude-sonnet",
       "status": "enforced",
-      "label_examples": ["Claude Sonnet 4.6", "Claude Sonnet 4.5"],
+      "label_examples": ["Claude Sonnet 5", "Claude Sonnet 4.6", "Claude Sonnet 4.5"],
       "rule_subset_note": "All Claude rules apply at default severity."
     },
     {
@@ -72,6 +81,12 @@
       "status": "reviewer-only",
       "label_examples": ["GPT-4o"],
       "rule_subset_note": "Legacy model; no new enforcement."
+    },
+    {
+      "family": "mai-code",
+      "status": "reviewer-only",
+      "label_examples": ["MAI-Code-1-Flash"],
+      "rule_subset_note": "Microsoft coding model; no MAI-specific automated prompting rules yet. Used for handoff-only orchestration routing."
     },
     {
       "family": "unknown",
@@ -199,7 +214,7 @@
       "model_families": ["any"],
       "applies_to": "both",
       "severity": "warn",
-      "summary": "Agents/prompts using a deprecated model label (per validate-deprecated-models.mjs) should be migrated.",
+      "summary": "Agents/prompts using a deprecated model label (per validate-models.mjs --only=deprecated) should be migrated.",
       "rationale": "Deprecated models lose vendor support and security updates; migration windows are often time-bound.",
       "source_id": "openai-upgrade-guide",
       "source_anchor": "upgrade-workflow",

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/jonathan-vella/azure-agentic-infraops/schemas/drawio-golden-scenario.schema.json",
+  "$id": "https://github.com/jonathan-vella/apex/schemas/drawio-golden-scenario.schema.json",
   "title": "APEX Draw.io Golden Scenario Expectation",
   "description": "Expectation envelope for a single golden scenario in tools/tests/drawio-golden/. Consumed by render-golden-diff.mjs (T-003), validator extensions (T-006..T-010), and the orchestrator (T-033).",
   "type": "object",
@@ -32,14 +32,7 @@
     },
     "diagram_type": {
       "type": "string",
-      "enum": [
-        "logical",
-        "network",
-        "sequence",
-        "deployment",
-        "logical+network",
-        "decomposed"
-      ],
+      "enum": ["logical", "network", "sequence", "deployment", "logical+network", "decomposed"],
       "description": "Expected diagram type per references/diagram-types.md (T-016)."
     },
     "scope": {
@@ -98,15 +91,7 @@
       "type": "array",
       "items": {
         "type": "string",
-        "enum": [
-          "icons",
-          "layout",
-          "styling",
-          "semantics",
-          "labels",
-          "type-mismatch",
-          "scaling"
-        ]
+        "enum": ["icons", "layout", "styling", "semantics", "labels", "type-mismatch", "scaling"]
       },
       "minItems": 1,
       "uniqueItems": true

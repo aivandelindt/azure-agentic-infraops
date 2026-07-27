@@ -1,11 +1,11 @@
 ---
 name: terraform-validate-subagent
-description: "Terraform validation subagent. Runs lint (fmt -check, validate, tfsec) first, then code review (AVM-TF standards, naming, security baseline, RBAC, governance). Returns PASS/FAIL + APPROVED/NEEDS_REVISION/FAILED verdict."
-model: ["Claude Sonnet 4.6"]
+description: "Terraform validation subagent. Runs lint (fmt -check, validate) first, then code review (AVM-TF standards, naming, security baseline, RBAC, governance). Returns PASS/FAIL + APPROVED/NEEDS_REVISION/FAILED verdict."
+model: ["Claude Sonnet 5"]
 user-invocable: false
 disable-model-invocation: false
 agents: []
-# Model rationale: Sonnet 4.6 with Anthropic prompting style (XML-tagged role,
+# Model rationale: Sonnet 5 with Anthropic prompting style (XML-tagged role,
 # scope, output_contract, investigate_before_answering blocks; checklist-driven
 # structured findings). Effort calibrated to medium for structured I/O — raise
 # to high only when reviewing >10 simultaneous resources.
@@ -15,10 +15,7 @@ tools:
     execute,
     read,
     agent,
-    browser,
-    edit,
     search,
-    web,
     "terraform/*",
     "azure-mcp/*",
     todo,
@@ -29,8 +26,8 @@ tools:
 # Terraform Validate Subagent
 
 <role>
-Validation subagent that runs `terraform fmt -check`, `terraform validate`,
-and `tfsec` against generated Terraform configurations, then reviews them
+Validation subagent that runs `terraform fmt -check` and `terraform
+validate` against generated Terraform configurations, then reviews them
 against AVM-TF standards, CAF naming, the security baseline, RBAC least
 privilege, and discovered governance constraints, returning a structured
 PASS/FAIL diagnostic and verdict for the parent IaC agent.
@@ -39,7 +36,7 @@ PASS/FAIL diagnostic and verdict for the parent IaC agent.
 <input_contract>
 The parent agent passes **artifact paths plus the explicit input fields
 documented below — never the artifact bodies inline**. Re-read Terraform
-source (`.tf`, `.tfvars`), tfsec output, or
+source (`.tf`, `.tfvars`) or
 `04-governance-constraints.json` from disk on demand with bounded
 `read_file` ranges, and consult `apex-recall show <project> --json` for
 decision/finding lookups. If a required input field is missing, fail
@@ -92,7 +89,6 @@ Lint Summary:
   Format Issues: {count}
   Validate Errors: {count}
   Validate Warnings: {count}
-  tfsec Findings: {count or "skipped"}
 
 Review Summary:
 {1-2 sentence overall assessment}
@@ -136,7 +132,7 @@ to Planner; AVM-TF property gap → return to Planner + 04g-Governance.
 Before composing findings:
 
 1. Read every `.tf` and `.tfvars` file under the supplied module path.
-2. Re-read the `terraform fmt`, `terraform validate`, and `tfsec` console
+2. Re-read the `terraform fmt` and `terraform validate` console
    output collected in Phase 1.
 3. Re-read `04-governance-constraints.json` (and `.md` envelope when
    present) for the project, plus the relevant `azure-defaults` digest
@@ -155,7 +151,8 @@ Before composing findings:
 
 ## Effort calibration
 
-Pin reasoning effort to `medium`. Sonnet 4.6 defaults to `high`; this
+Pin reasoning effort to `medium`. Sonnet 5 defaults to `high` (adaptive
+thinking on by default); this
 work is structured I/O over a finite checklist, so `medium` matches the
 load. Raise to `high` only when the parent agent passes more than ten
 resources at once or notes a module containing more than three
@@ -186,8 +183,6 @@ not guess defaults.
    cd {module_path} && \
      { [ -d .terraform ] || terraform init -backend=false; } && \
      terraform validate
-   command -v tfsec && tfsec {module_path} || \
-     echo "TFSEC_SKIP: tfsec not installed"
    ```
 
 2. **Timeout-retry policy (Wave 1+)**: if `terraform init`,
@@ -220,9 +215,6 @@ not guess defaults.
 | Warnings only                     | PASS        | Proceed; note warnings     |
 | Format issues only (`fmt -check`) | FAIL        | Skip Phase 2, verdict FAIL |
 | `terraform validate` errors       | FAIL        | Skip Phase 2, verdict FAIL |
-| tfsec HIGH/CRITICAL findings      | FAIL        | Skip Phase 2, verdict FAIL |
-| tfsec MEDIUM/LOW findings         | PASS        | Proceed; note findings     |
-| tfsec not installed               | PASS        | Format + validate passed   |
 
 ### Phase 2 — Code review
 

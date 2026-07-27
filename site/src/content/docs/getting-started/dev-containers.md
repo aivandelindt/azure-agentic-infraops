@@ -101,7 +101,7 @@ code .
 
 :::note[Use the template repository]
 Do not clone this upstream project directly. Create your own repo from the
-[Accelerator template](https://github.com/jonathan-vella/azure-agentic-infraops-accelerator)
+[Accelerator template](https://github.com/jonathan-vella/apex-accelerator)
 first. See the [Quickstart](../quickstart/) for the full setup flow.
 :::
 
@@ -144,7 +144,7 @@ reboots, and IDE restarts.
 #### Add to VS Code User Settings (once per machine)
 
 1. Open VS Code Settings: **Ctrl+,** (or **Cmd+,** on macOS)
-2. Click the **Open Settings (JSON)** icon (top-right)
+2. Select the **Open Settings (JSON)** icon (top-right)
 3. Add this entry (replace the placeholder with your actual token):
 
 ```jsonc
@@ -236,7 +236,7 @@ The Dev Container includes:
 | Category               | Tools                                                                    |
 | ---------------------- | ------------------------------------------------------------------------ |
 | **Azure**              | Azure CLI 2.50+, Bicep CLI 0.30+, Azure Pricing MCP                      |
-| **Terraform**          | Terraform (latest), tfsec, HashiCorp Terraform MCP Server                |
+| **Terraform**          | Terraform (latest), HashiCorp Terraform MCP Server                       |
 | **PowerShell**         | PowerShell 7+, Az modules                                                |
 | **Python**             | Python 3.14, diagrams library, graphviz                                  |
 | **Node.js**            | Node LTS+, npm, markdownlint                                             |

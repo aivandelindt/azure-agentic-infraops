@@ -1,6 +1,6 @@
 ---
 name: 11-Context Optimizer
-model: ["Claude Sonnet 4.6"]
+model: ["Claude Sonnet 5"]
 description: "Analyzes Copilot Chat debug logs to audit context-window utilization across agents. Identifies bloated prompts, redundant file reads, missing hand-off points, and wasted tokens. Produces actionable optimization reports. Recommendations only — never edits agents."
 user-invocable: true
 agents: []
@@ -18,10 +18,7 @@ tools:
     search/listDirectory,
     search/textSearch,
     edit/createFile,
-    edit/editFiles,
-    agent,
     web/fetch,
-    todo,
   ]
 handoffs:
   - label: "↩ Return to Orchestrator"
@@ -313,7 +310,9 @@ This agent is designed to be reusable across projects:
 ## Boundaries
 
 - **Always**: Analyze debug logs, produce optimization recommendations, identify token waste
-- **Ask first**: Implementing changes to agent definitions, modifying skill files
+- **Recommendations only**: this agent writes the report file but never edits
+  agent, skill, or instruction definitions — it surfaces changes for a human
+  (or a separate gated execution pass) to apply.
 
 <output_contract>
 Primary artifact: agent-output/{project}/11-context-optimization-report.md — executive

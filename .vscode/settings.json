@@ -21,10 +21,7 @@
   },
   "chat.hookFilesLocations": {
     ".github/hooks/tool-guardian": true,
-    ".github/hooks/secrets-scanner": true,
-    ".github/hooks/session-telemetry": true,
-    ".github/hooks/subagent-validation": true,
-    ".github/hooks/tool-audit": true
+    ".github/hooks/subagent-validation": true
   },
   "chat.useCustomAgentHooks": true,
   "chat.useAgentSkills": true,
@@ -108,7 +105,7 @@
   "deno.lint": true,
   "deno.unstable": [],
   "chat.mcp.serverSampling": {
-    "azure-agentic-infraops/.vscode/mcp.json: azure-mcp": {
+    "apex/.vscode/mcp.json: azure-mcp": {
       "allowedDuringChat": true
     }
   }

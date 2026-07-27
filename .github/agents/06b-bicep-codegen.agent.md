@@ -1,11 +1,11 @@
 ---
 name: 06b-Bicep CodeGen
 description: Expert Azure Bicep IaC specialist that creates near-production-ready Bicep templates following Azure Verified Modules (AVM) standards. Validates, tests, and ensures code quality.
-model: ["Claude Sonnet 4.6"]
+model: ["Claude Sonnet 5"]
 user-invocable: true
 agents: ["bicep-validate-subagent", "challenger-review-subagent"]
 tools:
-  [vscode/extensions, vscode/askQuestions, vscode/installExtension, vscode/memory, vscode/newWorkspace, vscode/resolveMemoryFileUri, vscode/runCommand, vscode/vscodeAPI, vscode/toolSearch, execute/getTerminalOutput, execute/killTerminal, execute/sendToTerminal, execute/createAndRunTask, execute/runTests, execute/runNotebookCell, execute/executionSubagent, execute/runInTerminal, read/terminalSelection, read/terminalLastCommand, read/getNotebookSummary, read/problems, read/readFile, read/viewImage, read/readNotebookCellOutput, agent/runSubagent, browser/openBrowserPage, browser/readPage, browser/screenshotPage, browser/navigatePage, browser/clickElement, browser/dragElement, browser/hoverElement, browser/typeInPage, browser/runPlaywrightCode, browser/handleDialog, edit/createDirectory, edit/createFile, edit/createJupyterNotebook, edit/editFiles, edit/editNotebook, edit/rename, search/codebase, search/fileSearch, search/listDirectory, search/textSearch, search/usages, web/fetch, web/githubRepo, web/githubTextSearch, bicep/build_bicep, bicep/build_bicepparam, bicep/decompile_arm_parameters_file, bicep/decompile_arm_template_file, bicep/format_bicep_file, bicep/get_azure_resource_type_schema, bicep/get_bicep_best_practices, bicep/get_deployment_snapshot, bicep/get_extension_resource_type_schema, bicep/get_file_references, bicep/list_avm_metadata, bicep/list_azure_resource_types, bicep/list_extension_resource_types, bicep/list_well_known_extensions, azure-mcp/acr, azure-mcp/advisor, azure-mcp/aks, azure-mcp/appconfig, azure-mcp/applens, azure-mcp/applicationinsights, azure-mcp/appservice, azure-mcp/azd, azure-mcp/azurebackup, azure-mcp/azuremigrate, azure-mcp/azureterraform, azure-mcp/azureterraformbestpractices, azure-mcp/bicepschema, azure-mcp/cloudarchitect, azure-mcp/communication, azure-mcp/compute, azure-mcp/confidentialledger, azure-mcp/containerapps, azure-mcp/cosmos, azure-mcp/datadog, azure-mcp/deploy, azure-mcp/deviceregistry, azure-mcp/documentation, azure-mcp/eventgrid, azure-mcp/eventhubs, azure-mcp/extension_azqr, azure-mcp/extension_cli_generate, azure-mcp/extension_cli_install, azure-mcp/fileshares, azure-mcp/foundry, azure-mcp/foundryextensions, azure-mcp/functionapp, azure-mcp/functions, azure-mcp/get_azure_bestpractices, azure-mcp/grafana, azure-mcp/group_list, azure-mcp/group_resource_list, azure-mcp/keyvault, azure-mcp/kusto, azure-mcp/loadtesting, azure-mcp/managedlustre, azure-mcp/marketplace, azure-mcp/monitor, azure-mcp/mysql, azure-mcp/policy, azure-mcp/postgres, azure-mcp/pricing, azure-mcp/quota, azure-mcp/redis, azure-mcp/resourcehealth, azure-mcp/role, azure-mcp/search, azure-mcp/servicebus, azure-mcp/servicefabric, azure-mcp/signalr, azure-mcp/speech, azure-mcp/sql, azure-mcp/storage, azure-mcp/storagesync, azure-mcp/subscription_list, azure-mcp/virtualdesktop, azure-mcp/wellarchitectedframework, azure-mcp/workbooks, todo, vscode.mermaid-chat-features/renderMermaidDiagram, ms-azuretools.vscode-azureresourcegroups/azureActivityLog]
+  [vscode, execute, read, agent, browser, vscodeGeneral/rename, vscodeGeneral/usages, vscodeNotebooks/createJupyterNotebook, vscodeNotebooks/editNotebook, ms-azuretools.vscode-azureresourcegroups, edit, search, web, 'azure-mcp/*', 'bicep/*', todo]
 handoffs:
   - label: "▶ Run Preflight Check"
     agent: 06b-Bicep CodeGen
@@ -143,6 +143,11 @@ Before doing any work, read these skills.
 5. Read `.github/instructions/iac-bicep-best-practices.instructions.md` — governance mandate, dynamic tag list
 6. Read `.github/skills/context-management/SKILL.md` — runtime
    compression for large plan/governance artifacts (Mode A)
+7. Read the execution-subagent prompt contract
+   [tools/apex-prompts/utility-prompts/execution-subagent.prompt.md](../../tools/apex-prompts/utility-prompts/execution-subagent.prompt.md)
+   — every `runSubagent` call (bicep-validate-subagent,
+   challenger-review-subagent) MUST follow the three-H2 contract
+   (issue #425).
 
 ## Do
 
@@ -300,7 +305,7 @@ from scratch.**
 3. For each matrix row, record the target Bicep property path and
    required value — these become the L2 attestations the validator
    will check after code generation.
-4. Merge governance tags with 4 baseline defaults (governance wins).
+4. Merge governance tags with the 9 baseline defaults (governance wins).
 5. If `04-governance-constraints.json` contains a structured `override` block
    for a Deny finding (see `04g-governance.agent.md` → Policy Override Pattern),
    validate that `reason`, `issue_link`, and a future-dated `expiry` are all
@@ -370,6 +375,12 @@ Invoke both validation subagents in parallel via simultaneous `#runSubagent` cal
 1. `bicep-validate-subagent` (path: `infra/bicep/{project}/main.bicep`) — expect APPROVED (runs lint then review)
 
 Await both results. Both must pass before Phase 4.5.
+
+If a subagent **errors or times out** (distinct from returning a
+`NEEDS_REVISION`/`FAILED` verdict), apply the `iac-common` bounded-retry
+pattern: retry the call once. If it fails again, stop and ask the user via
+`askQuestions` — Retry / Fix Inline / Abort. Do not advance to Phase 4.5 on
+an unresolved subagent error.
 
 Run `npm run validate:iac-security-baseline` on `infra/bicep/{project}/` —
 violations are a hard gate (fix before Phase 4.5).

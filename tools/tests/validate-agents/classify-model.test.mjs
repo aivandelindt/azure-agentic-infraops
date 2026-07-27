@@ -17,7 +17,11 @@ test("classifyModel: Claude Opus 4.7 → claude-opus", () => {
   assert.equal(classifyModel(["Claude Opus 4.7"]), "claude-opus");
 });
 
-test("classifyModel: Claude Sonnet 4.6 → claude-sonnet", () => {
+test("classifyModel: Claude Sonnet 5 → claude-sonnet", () => {
+  assert.equal(classifyModel("Claude Sonnet 5"), "claude-sonnet");
+});
+
+test("classifyModel: Claude Sonnet 4.6 → claude-sonnet (deprecated label, still classifies)", () => {
   assert.equal(classifyModel("Claude Sonnet 4.6"), "claude-sonnet");
 });
 
@@ -45,6 +49,11 @@ test("classifyModel: GPT-5.3-Codex → gpt-codex", () => {
 
 test("classifyModel: GPT-4o → gpt-4o", () => {
   assert.equal(classifyModel("GPT-4o"), "gpt-4o");
+});
+
+test("classifyModel: MAI-Code-1-Flash → mai-code", () => {
+  assert.equal(classifyModel("MAI-Code-1-Flash"), "mai-code");
+  assert.equal(classifyModel(["MAI-Code-1-Flash"]), "mai-code");
 });
 
 test("classifyModel: unknown / missing → unknown", () => {

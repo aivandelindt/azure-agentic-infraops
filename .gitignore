@@ -21,8 +21,9 @@ Copilot-Processing.md
 !.vscode/settings.json
 
 # Root .mcp.json is deprecated — Azure MCP is provided by the
-# @azure/mcp npm package launched via npx (see .vscode/mcp.json).
-# Use .vscode/mcp.json for MCP server configuration.
+# ms-azuretools.vscode-azure-mcp-server extension (see devcontainer.json
+# customizations.vscode.extensions). Use .vscode/mcp.json for the
+# remaining MCP server configuration (github, azure-pricing, drawio, etc.).
 *.code-workspace
 
 # OS
@@ -33,6 +34,8 @@ desktop.ini
 # Logs
 *.log
 logs/
+# Astro docs review audit trail is committable
+!logs/copilot/docs-review/
 
 # Root decision snapshots are generated artifacts, not source files.
 decisions*.json
@@ -96,14 +99,6 @@ freshness-report.json
 # Use a contents-only ignore (rather than the directory itself) so
 # that single committed deliverables can be re-included with `!`.
 agent-output/_baselines/*
-# Exception: the multi-log token-reduction baseline is a canonical
-# deliverable (Plan 01 Phase 0) — keep it tracked.
-!agent-output/_baselines/multi-log-baseline.json
-# Exception: Plan 01 Phase 4 body-compression baseline + target
-# hypotheses — canonical PR-visible deliverable for the body
-# compression workstream.
-!agent-output/_baselines/phase4-body-baseline.json
-!agent-output/_baselines/phase4-body-targets.json
 
 # Draw.io quality bench runs (working data; commit only the canonical
 # baseline at tools/tests/drawio-baseline/regen-baseline.json)

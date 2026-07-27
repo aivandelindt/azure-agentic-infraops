@@ -37,7 +37,7 @@ concurrency:
 # script (`lefthook install`), which registers a pre-commit hook that calls
 # `gitleaks`. gitleaks is not installed on the GitHub-hosted runner, so the
 # main → sensei merge commit fails with `gitleaks: not found`. Secrets
-# scanning still runs on every PR via ci.yml.
+# scanning via gitleaks is a local pre-commit hook only.
 env:
   LEFTHOOK: "0"
 
@@ -106,7 +106,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout feat/skills-sensei
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: feat/skills-sensei
           fetch-depth: 0 # full history required for merge
@@ -179,7 +179,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout feat/skills-sensei (post-merge)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: feat/skills-sensei
           submodules: recursive

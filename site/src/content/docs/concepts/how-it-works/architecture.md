@@ -27,6 +27,28 @@ between critical phases:
 
 ## The Orchestrator Pattern
 
+```mermaid
+flowchart LR
+  classDef orch fill:#0078d4,stroke:#0078d4,color:#fff,rx:6,ry:6
+  classDef step fill:#1e3a5f,stroke:#0078d4,color:#dbeafe,rx:6,ry:6
+  classDef state fill:#fef3c7,stroke:#d97706,color:#7c2d12,rx:6,ry:6
+
+  O((01-Orchestrator)):::orch
+  R[02 Requirements]:::step
+  A[03 Architect]:::step
+  D[04 Design - opt]:::step
+  G[04g Governance]:::step
+  P[05 IaC Planner]:::step
+  C[06b / 06t CodeGen]:::step
+  X[07b / 07t Deploy]:::step
+  B[08 As-Built]:::step
+  S{{Session state\n00-session-state.json}}:::state
+
+  O --> R --> A --> D --> G --> P --> C --> X --> B
+  A -.-> G
+  O <-->|reads / writes| S
+```
+
 <img
   src="https://images.unsplash.com/photo-1507838153414-b4b713384a76?q=80&w=1200&auto=format&fit=crop"
   height="200"
@@ -78,7 +100,7 @@ tier is resolved from agent frontmatter — consult those files (or
 
 **Subagent Integration Matrix**: The full mapping of which subagents are invoked by
 which parent agents is externalised to the
-[subagent-integration reference](https://github.com/jonathan-vella/azure-agentic-infraops/blob/main/.github/skills/workflow-engine/references/subagent-integration.md)
+[subagent-integration reference](https://github.com/jonathan-vella/apex/blob/main/.github/skills/workflow-engine/references/subagent-integration.md)
 to keep the Orchestrator body under the 350-line limit.
 
 ## Dual IaC Tracks

@@ -1,24 +1,25 @@
 {
-  "name": "azure-agentic-infraops-docs",
+  "name": "apex-docs",
   "type": "module",
   "version": "0.0.1",
   "scripts": {
     "prebuild": "node ../tools/scripts/generate-explorer-graph.mjs",
     "dev": "astro dev",
     "start": "astro dev",
-    "build": "astro build",
+    "build": "PUBLIC_GIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo dev) PUBLIC_BUILD_DATE=$(date -u +%Y-%m-%d) astro build",
     "preview": "astro preview",
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/starlight": "^0.39.2",
+    "@astrojs/markdown-remark": "^7.2.1",
+    "@astrojs/starlight": "^0.41.3",
     "@fontsource/ibm-plex-mono": "^5.2.7",
     "@fontsource/manrope": "^5.2.8",
     "@fontsource/space-grotesk": "^5.2.10",
-    "astro": "^6.3.3",
+    "astro": "^7.0.6",
     "rehype-mermaid-lite": "^1.0.0",
-    "sharp": "^0.34.5",
-    "starlight-links-validator": "^0.24.0"
+    "sharp": "^0.35.3",
+    "starlight-links-validator": "^0.25.2"
   },
   "overrides": {
     "devalue": "^5.8.1"
